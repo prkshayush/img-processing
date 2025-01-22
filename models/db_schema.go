@@ -17,7 +17,7 @@ type Job struct {
 }
 
 // POST insert function
-func InsertJobArr(collection *mongo.Collection, job Job) error{
+func InsertJobArr(collection *mongo.Collection, job Job) error {
 	_, err := collection.InsertOne(context.TODO(), job)
 
 	return err
@@ -33,25 +33,15 @@ func GetStatusByID(collection *mongo.Collection, jobID Job) (*Job, error) {
 
 // PATCH functions
 
-func UpdateStatus(collection *mongo.Collection, jobID Job, status string) error {
+func UpdateStatus(collection *mongo.Collection, jobID string, status string, storeID []string, failedID []string) error {
 	filter := bson.M{"job_id": jobID}
-	update := bson.M{"$set": bson.M{"status": status}}
-
-	_, err := collection.UpdateOne(context.TODO(), filter, update)
-	return err
-}
-
-func AddStoreID(collection *mongo.Collection, jobID Job, storeID string) error{
-	filter := bson.M{"job_id": jobID}
-	update := bson.M{"$addToSet": bson.M{"store_ids": storeID}}
-	_, err := collection.UpdateOne(context.TODO(), filter, update)
-
-	return err
-}
-
-func AddFailedID(collection *mongo.Collection, jobID Job, failedID string) error{
-	filter := bson.M{"job_id": jobID}
-	update := bson.M{"$addToSet": bson.M{"failed_id": failedID}}
+	update := bson.M{
+		"$set": bson.M{
+			"status":    status,
+			"store_id": storeID,
+			"failed_id": failedID,
+		},
+	}
 	_, err := collection.UpdateOne(context.TODO(), filter, update)
 
 	return err
