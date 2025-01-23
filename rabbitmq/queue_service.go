@@ -1,16 +1,20 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/rabbitmq/amqp091-go"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var conn *amqp091.Connection
-var channel *amqp091.Channel
+var Channel *amqp091.Channel
+var DBCollection *mongo.Collection
 
 // connection and initialise
 func Connect() error {
@@ -19,6 +23,9 @@ func Connect() error {
 	}
 
 	rabbit_uri := os.Getenv("RABBITMQ_URI")
+    mongoURI := os.Getenv("MONGO_URI")
+    mongoDBName := os.Getenv("MONGO_DB")
+    mongoCollectionName := os.Getenv("MONGO_COLLECTION")
 
 	var err error
 	conn, err := amqp091.Dial(rabbit_uri)
@@ -26,20 +33,28 @@ func Connect() error {
 		return fmt.Errorf("failed connection to RabbitMQ: %v", err)
 	}
 
-	channel, err = conn.Channel()
+	Channel, err = conn.Channel()
 	if err != nil {
 		return fmt.Errorf("failed to create Channel: %v", err)
 	}
 
+	clientOptions := options.Client().ApplyURI(mongoURI)
+    client, err := mongo.Connect(context.TODO(), clientOptions)
+    if err != nil {
+        return fmt.Errorf("failed to connect to MongoDB: %v", err)
+    }
+
+	DBCollection = client.Database(mongoDBName).Collection(mongoCollectionName)
+    
 	return nil
 }
 
 func PublishToQueue(queueName string, jobID interface{}) error {
-	if channel == nil {
+	if Channel == nil {
 		return fmt.Errorf("channel is not initialized")
 	}
 
-	_, err := channel.QueueDeclare(
+	_, err := Channel.QueueDeclare(
 		queueName, // Queue name
 		true,      // Durable
 		false,     // Auto delete
@@ -51,9 +66,9 @@ func PublishToQueue(queueName string, jobID interface{}) error {
 		return fmt.Errorf("failed to declare a queue: %v", err)
 	}
 	
-	// Convert jobID to string if needed
+	// jobID to string if needed
 	body := fmt.Sprintf("%v", jobID)
-	err = channel.Publish(
+	err = Channel.Publish(
 		"",           // Default exchange
 		queueName,    // Queue name
 		false,        // Mandatory

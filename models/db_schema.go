@@ -8,10 +8,16 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+type Visit struct {
+	StoreID   string   `json:"store_id" bson:"store_id"`
+	ImageURLs []string `json:"image_url" bson:"image_url"`
+	VisitTime string   `json:"visit_time" bson:"visit_time"`
+}
+
 type Job struct {
 	JobID     interface{} `json:"job_id" bson:"_id,omitempty"`
 	Status    string      `json:"status" bson:"status"`
-	StoreID   []string    `json:"store_id,omitempty" bson:"store_id,omitempty"`
+	Visits    []Visit     `json:"visits" bson:"visits"`
 	FailedID  []string    `json:"failed_id,omitempty" bson:"failed_id,omitempty"`
 	CreatedAt time.Time   `json:"created_at" bson:"created_at"`
 }
@@ -31,14 +37,11 @@ func GetStatusByID(collection *mongo.Collection, jobID interface{}) (*Job, error
 
 // PATCH functions
 
-func UpdateStatus(collection *mongo.Collection, jobID interface{}, status string, storeID []string, failedID []string) error {
+func UpdateStatus(collection *mongo.Collection, jobID interface{}, status string, failedStoreID string) error {
 	filter := bson.M{"_id": jobID}
-	update := bson.M{
-		"$set": bson.M{
-			"status":    status,
-			"store_id":  storeID,
-			"failed_id": failedID,
-		},
+	update := bson.M{"$set": bson.M{"status": status}}
+	if status == "failed" {
+		update["$push"] = bson.M{"failed_id": failedStoreID}
 	}
 	_, err := collection.UpdateOne(context.TODO(), filter, update)
 

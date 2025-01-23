@@ -10,13 +10,19 @@ import (
 // validate request & send to rabit queue
 func SubmitJob(c *gin.Context) {
 	var request services.Request
-
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid Job",
 		})
 		
+		return
+	}
+
+	if request.Count != len(request.Visits) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Count doesn't match length of Visits",
+		})
 		return
 	}
 

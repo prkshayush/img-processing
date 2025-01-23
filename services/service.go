@@ -5,6 +5,7 @@ import (
 
 	"github.com/prkshayush/img-processing/models"
 	"github.com/prkshayush/img-processing/rabbitmq"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Request struct {
@@ -28,12 +29,13 @@ func HandleJobSubmit(request Request) (interface{}, error) {
 		return nil, err
 	}
 
-	err = rabbitmq.PublishToQueue("jobQueue", insertRes.InsertedID)
-	if err != nil {
-		return nil, err
-	}
+	jobID := insertRes.InsertedID.(primitive.ObjectID).Hex()
+    err = rabbitmq.PublishToQueue("jobQueue", jobID)
+    if err != nil {
+        return nil, err
+    }
 
-	return insertRes.InsertedID, nil
+    return jobID, nil
 }
 
 // GET route service
