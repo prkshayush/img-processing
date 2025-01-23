@@ -1,65 +1,65 @@
 package controllers
 
 import (
-    "net/http"
-    "github.com/gin-gonic/gin"
-    "github.com/prkshayush/img-processing/models"
-    "github.com/prkshayush/img-processing/services"
-    "go.mongodb.org/mongo-driver/bson/primitive"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/prkshayush/img-processing/services"
 )
 
-// submit controller
+// validate request & send to rabit queue
 func SubmitJob(c *gin.Context) {
-    var jobRequest models.JobRequest
-    if err := c.ShouldBindJSON(&jobRequest); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
-        return
-    }
+	var request services.Request
+	err := c.ShouldBindJSON(&request)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid Job",
+		})
+		
+		return
+	}
 
-    if jobRequest.Count != len(jobRequest.Visits) {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Count does not match the number of visits"})
-        return
-    }
+	if request.Count != len(request.Visits) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Count doesn't match length of Visits",
+		})
+		return
+	}
 
-    for _, visit := range jobRequest.Visits {
-        if visit.StoreID == "" || visit.VisitTime == "" || len(visit.ImageURLs) == 0 {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid visit details"})
-            return
-        }
-    }
+	jobID, err := services.HandleJobSubmit(request)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to submit job",
+		})
 
-    jobID, err := services.HandleJobSubmit(jobRequest)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create job"})
-        return
-    }
+		return
+	}
 
-    c.JSON(http.StatusCreated, gin.H{"job_id": jobID})
+	c.JSON(http.StatusOK, gin.H{
+		"job_id": jobID,
+	})
+
 }
 
-// status controller
+// get request handler
 func GetJobStatus(c *gin.Context) {
-    jobID := c.Query("jobID")
-    if jobID == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Missing job ID"})
-        return
-    }
+	jobID := c.DefaultQuery("jobID", "")
+	if jobID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Missing job ID",
+		})
+	}
 
-    jobObjectID, err := primitive.ObjectIDFromHex(jobID)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
-        return
-    }
+	status, err := services.GetJobStatus(jobID)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Couldn't get job stauts",
+		})
 
-    job, err := models.GetJobByID(jobObjectID)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get job status"})
-        return
-    }
+		return
+	}
 
-    c.JSON(http.StatusOK, gin.H{
-        "status": job.Status,
-        "job_id": jobID,
-        "failed_id": job.FailedID,
-    })
+	c.JSON(http.StatusOK, gin.H{
+		"status": status,
+	})
 }
