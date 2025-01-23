@@ -4,18 +4,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prkshayush/img-processing/services"
 )
 
 // validate request & send to rabit queue
 func SubmitJob(c *gin.Context) {
-	var request struct {
-		Count  int `json:"count"`
-		Visits []struct {
-			StoreID   string   `json:"store_id"`
-			ImageURLs []string `json:"image_url"`
-			VisitTime string   `json:"visit_time"`
-		} `json:"visits"`
-	}
+	var request services.Request
 
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
