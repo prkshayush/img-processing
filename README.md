@@ -70,8 +70,3 @@ curl -X POST http://localhost:8080/api/submit -H "Content-Type: application/json
 ```sh
 curl -X GET "http://localhost:8080/api/status?jobID=<job_id>"
 ```
-
-## What could be improved if I had more time
-
-- If had 1-2 days more, would've integrated a simple frontend, which could display processing/failed/successful tags.
-- Instead of temporarily saving MasterStoreData on local machine, could have used S3 bucket.
